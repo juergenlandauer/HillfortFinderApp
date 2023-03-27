@@ -3,18 +3,10 @@
 
 import numpy as np
 
-# for RVT
-from osgeo import gdal
-#import rvt.default
-import rvt.vis
-
 def normalizeImg(img, NORMALIZER):
     ''' takes an image and applies a normalizer function to it
         - images could be a Pillow image or a Numpy array 
     '''
-    
-    # color conversion
-    #img = img.convert(COLOR) ####   .resize((resolution, resolution))
     
     # min/max excluding NaN values
     tileMin = np.min(np.ma.masked_array(img, np.isnan(img)))
@@ -75,28 +67,6 @@ def normalizeImg(img, NORMALIZER):
         mean, std = pixels.mean(), pixels.std()
         print('Mean: %.3f, Standard Deviation: %.3f' % (mean, std))
         print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
-
-    elif NORMALIZER == "Hillshade":
-        pixels = rvt.vis.hillshade(
-            dem=np.squeeze(img), # remove axis...
-            sun_azimuth=315,
-            sun_elevation=35,
-            resolution_x=1.,
-            resolution_y=1.,
-            #no_data=dem_no_data
-        ) * 256 # scale to 8bit
-        pixels = np.nan_to_num(pixels, copy=True, nan=0.0, posinf=None, neginf=None)# remove NaN
-        pixels = pixels[np.newaxis,...] # and add axis again
-        
-    elif NORMALIZER == "SkyViewFactor":
-        pixels = rvt.vis.sky_view_factor(
-            dem=np.squeeze(img), # remove axis...
-            resolution=1.,
-            #no_data=dem_no_data
-        ).get('svf') * 256 # scale to 8bit
-        pixels = np.nan_to_num(pixels, copy=True, nan=0.0, posinf=None, neginf=None)# remove NaN
-        pixels = pixels[np.newaxis,...] # and add axis again
-        
 
     else:
         print ("unknown normalizer:", NORMALIZER)
