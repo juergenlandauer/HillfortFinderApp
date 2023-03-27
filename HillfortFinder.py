@@ -7,6 +7,8 @@ import streamlit as st
 
 class Predict:
     def __init__(self, filename):
+        st.write(Path().glob('**/*'))
+        st.write(str(Path/filename))
         self.learn_inference = load_learner(Path()/filename)
         self.img = self.get_image_from_upload()
         if self.img is not None:
