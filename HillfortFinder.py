@@ -78,7 +78,7 @@ def get_snippet(tileList, bboxSize, offset=1.):
     stepsize = int(bboxSize * offset)
     for t_fn in tileList: # for all tiles in list
         with rio.open(t_fn) as tile:
-            progress_text = "Operation in progress. Please wait..."
+            progress_text = "LiDAR tile uploaded, now predicting..."
             my_bar = st.progress(0, text=progress_text)
             # for all coordinates in this tile
             ##st.write ("width, stepsize, bboxSize, offset=", tile.width, stepsize, bboxSize, offset)
@@ -121,21 +121,22 @@ def predict_tileList(bboxSize, offset, tileList):
             i += 1
 
         if i >= MAX_IMAGES or img==None: # process batch if enough images or end reached
-            st.write ("new batch")
+            print("new batch")
             if snippetList: # list not empty
                 chunk_ret = predictAndStore(snippetList, coordList, fileList, use_TTA=use_TTA)
                 ret = pd.concat([ret, chunk_ret]) ## add it to result
                 snippetList = []; coordList = []; fileList = []; transList = []; i = 0
-    st.write("AI processed ", len(ret), "patches.")
+    st.write("AI processed ", len(ret), "patches within your tile.")
     return ret
 
 class Predict:
     def __init__(self):
         self.img = self.get_image_from_upload()
         if self.img is not None:
-            self.prepare_output()
             self.get_prediction()
             self.process_output()
+            st.write("here again?")
+            self.img = None
     
     @staticmethod
     def get_image_from_upload():
@@ -145,16 +146,10 @@ class Predict:
             with open('./mytile.tif', 'wb') as f: f.write(uploaded_file.getbuffer())
         return uploaded_file
     
-    def prepare_output(self):
-        st.write ("File loaded...now predicting...")
-
     def get_prediction(self):
         tileList =["./mytile.tif"]
         self.recfile = "HillfortFinderResults.csv"
         self.ret = predict_tileList(bboxSize, offset, tileList)
-        #self.csv = self.ret.to_csv(self.recfile, index=False, encoding='utf-8')
-    
-    ##def convert_df(df): return df.to_csv().encode('utf-8')
 
     def process_output(self):
         # shows uploaded image
@@ -168,3 +163,10 @@ if __name__=='__main__':
     st.header("Hillfort Finder App")
     predictor = Predict()
 
+#with st.form("my-form", clear_on_submit=True):
+#        file = st.file_uploader("FILE UPLOADER")
+#        submitted = st.form_submit_button("UPLOAD!")
+#
+#    if submitted and file is not None:
+#        st.write("UPLOADED!")
+#        # do stuff with your uploaded file
