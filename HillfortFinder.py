@@ -49,7 +49,7 @@ if __name__=='__main__':
     st.header("Hillfort Finder App")
 
 
-    modelfile = 'm_L100_0.pkl'
+    modelfile = 'm_L100_1.pkl'
 
     predictor = Predict(modelfile)
 
