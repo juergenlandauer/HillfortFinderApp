@@ -2,6 +2,6 @@
 streamlit
 torch==1.13.1+cpu
 #torchvision==0.8.2
-fastai==2.2.5
+fastai==2.7.11
 #jupyter
 rasterio
