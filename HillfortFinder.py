@@ -1,4 +1,3 @@
-#from fastai.vision.widgets import *
 from fastai.vision.all import *
 import gc
 import streamlit as st
@@ -78,7 +77,7 @@ def get_snippet(tileList, bboxSize, offset=1.):
     stepsize = int(bboxSize * offset)
     for t_fn in tileList: # for all tiles in list
         with rio.open(t_fn) as tile:
-            progress_text = "LiDAR tile uploaded, now predicting..."
+            progress_text = "LiDAR tile uploaded, now predicting hillforts. This could take several minutes..."
             my_bar = st.progress(0, text=progress_text)
             # for all coordinates in this tile
             ##st.write ("width, stepsize, bboxSize, offset=", tile.width, stepsize, bboxSize, offset)
@@ -87,11 +86,11 @@ def get_snippet(tileList, bboxSize, offset=1.):
                 ##st.write("snippet x=", x/tile.width)
                 for y in range(0, tile.height, stepsize):
                     win=Window(x, y, bboxSize, bboxSize)
-                    snippet = tile.read(1, window=win) # band 1, windowed
+                    snippet = tile.read(1, window=win) # band 1 only, windowed
                     if snippet.shape != (bboxSize, bboxSize): continue # incomplete snippet => drop it
                     NaN_percentage = (snippet==tile.nodata).sum()
                     if NaN_percentage > 0: #ignore this snippet
-                        st.write("NaN patch encountered, ignored.")
+                        #st.write("NaN patch encountered, ignored.")
                         continue
                     if snippet.sum() == 0:
                         #st.write("black: ignore")
@@ -105,7 +104,7 @@ def get_snippet(tileList, bboxSize, offset=1.):
                     yield (PILImage.create(normalized_snippet), filename, centerPoint, win_transform)
     yield (None, None, None, None) # end of list reached
 
-MAX_IMAGES = 512 # how many should we batch process at once in memory?
+MAX_IMAGES = 256 # how many should we batch process at once in memory?
 
 # predict an entire tile list
 def predict_tileList(bboxSize, offset, tileList):
@@ -129,44 +128,64 @@ def predict_tileList(bboxSize, offset, tileList):
     st.write("AI processed ", len(ret), "patches within your tile.")
     return ret
 
-class Predict:
-    def __init__(self):
-        self.img = self.get_image_from_upload()
-        if self.img is not None:
-            self.get_prediction()
-            self.process_output()
-            st.write("here again?")
-            self.img = None
-    
-    @staticmethod
-    def get_image_from_upload():
-        # gets images
-        uploaded_file = st.file_uploader("Upload Files",type=['tif'])
-        if uploaded_file is not None:
-            with open('./mytile.tif', 'wb') as f: f.write(uploaded_file.getbuffer())
-        return uploaded_file
-    
-    def get_prediction(self):
-        tileList =["./mytile.tif"]
-        self.recfile = "HillfortFinderResults.csv"
-        self.ret = predict_tileList(bboxSize, offset, tileList)
+def spatial_resolution(raster):
+    t = raster.transform
+    x = t[0]; y =-t[4]
+    return x, y
 
-    def process_output(self):
-        # shows uploaded image
-        # TODO use to show progress bar, instructions, download file, etc.
-        st.write('PROCESSING COMPLETE...')      
-        csv = self.ret.to_csv(index=False).encode('utf-8')##convert_df(self.ret)
-        st.download_button(label="Download data as CSV", data=csv, file_name=self.recfile, mime='text/csv')
-        
+def get_image_from_upload():
+    st.write('Please upload your LiDAR tile here.')
+    st.write('Note that the "raw" DEM (Digital Elevation Model) produces best results. Visualisations such as hillshade are not tested.')
+    uploaded_file = st.file_uploader("Upload your LiDAR tile:",type=['tif'])
+    if uploaded_file is not None:
+        with open('mytile.tif', 'wb') as f: f.write(uploaded_file.getbuffer())
+        # analyse data
+        dataset = rio.open('mytile.tif')
+        count = dataset.count
+        st.write('Now analysing your tile:')
+        st.write('* number of bands = ', count)
+        if count > 1: st.write(' ==> Your tile has more than one LiDAR band, we use only band #1')
+        if dataset.crs is None: 
+            st.write('==> Your tile does not have a coordinate reference system (CRS). Aborting...')
+            assert(False) # hard abort :-)
+        else:
+            st.write('* CRS = ', dataset.crs.to_epsg())
+            res = spatial_resolution(dataset)
+            st.write('* Resolution (m) = ', res[0])
+            if res[0] < 1. or res[0] > 2.: 
+                st.write('!!! This App has only been tested *with 1m and 2m resolution only*, use at own risk !!!')
+    return uploaded_file
+
+def get_prediction():
+    if st.session_state.IMG is not None:
+        ret = predict_tileList(bboxSize, offset, tileList)
+        return ret
+    else: st.write("IMG is None!")
+
+import base64
+def get_table_download_link(df):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}" download="results.csv">Click here to download results</a>'
+    return href
+
+def process_output(ret):
+    # shows uploaded image
+    # TODO use to show progress bar, instructions, download file, etc.
+    st.write('PROCESSING COMPLETE...')      
+    href = get_table_download_link(ret)
+    st.markdown(href, unsafe_allow_html=True)    
+
+tileList =["./mytile.tif"]
+recfile = "HillfortFinderResults.csv"
+
 if __name__=='__main__':
+    st.session_state.IMG = None
     st.set_page_config(page_title="Hillfort Finder App")
     st.header("Hillfort Finder App")
-    predictor = Predict()
-
-#with st.form("my-form", clear_on_submit=True):
-#        file = st.file_uploader("FILE UPLOADER")
-#        submitted = st.form_submit_button("UPLOAD!")
-#
-#    if submitted and file is not None:
-#        st.write("UPLOADED!")
-#        # do stuff with your uploaded file
+    st.session_state.IMG = get_image_from_upload()
+    if st.session_state.IMG is not None:
+        ret = get_prediction()
+        process_output(ret)
+        #st.write("here again?")
+    
