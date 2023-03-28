@@ -1,3 +1,4 @@
+#from fastai.vision.widgets import *
 from fastai.vision.all import *
 import gc
 import streamlit as st
@@ -125,7 +126,7 @@ def predict_tileList(bboxSize, offset, tileList):
                 chunk_ret = predictAndStore(snippetList, coordList, fileList, use_TTA=use_TTA)
                 ret = pd.concat([ret, chunk_ret]) ## add it to result
                 snippetList = []; coordList = []; fileList = []; transList = []; i = 0
-    st.write("AI processed ", len(ret), "patches within your tile.")
+    st.write("COMPLETE! ", len(ret), "patches from your tile were processed")
     return ret
 
 def spatial_resolution(raster):
@@ -170,11 +171,10 @@ def get_table_download_link(df):
     return href
 
 def process_output(ret):
-    # shows uploaded image
-    # TODO use to show progress bar, instructions, download file, etc.
-    st.write('PROCESSING COMPLETE...')      
     href = get_table_download_link(ret)
-    st.markdown(href, unsafe_allow_html=True)    
+    st.markdown(href, unsafe_allow_html=True)
+    st.write("How to use the output? Find instructions here:")
+    st.markdown(f'<a href="https://github.com/juergenlandauer/HillfortFinderApp/raw/main/HillfortFinderApp%20usage%20manual.pdf">HillfortFinderApp usage manual</a>', unsafe_allow_html=True)
 
 tileList =["./mytile.tif"]
 recfile = "HillfortFinderResults.csv"
@@ -187,5 +187,3 @@ if __name__=='__main__':
     if st.session_state.IMG is not None:
         ret = get_prediction()
         process_output(ret)
-        #st.write("here again?")
-    
