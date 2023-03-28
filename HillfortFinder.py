@@ -136,7 +136,7 @@ def spatial_resolution(raster):
 
 def get_image_from_upload():
     st.write('Please upload your LiDAR tile here.')
-    st.write('Note that the "raw" DEM (Digital Elevation Model) produces best results. Visualisations such as hillshade are not tested.')
+    st.write('Note that the "raw" DEM (Digital Elevation Model) produces best results (try avoiding visualisations such as hillshade).')
     uploaded_file = st.file_uploader("Upload your LiDAR tile:",type=['tif'])
     if uploaded_file is not None:
         with open('mytile.tif', 'wb') as f: f.write(uploaded_file.getbuffer())
